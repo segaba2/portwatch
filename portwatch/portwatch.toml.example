@@ -1,0 +1,35 @@
+# portwatch example configuration file
+# Copy to /etc/portwatch/portwatch.toml and adjust as needed.
+
+[scan]
+# Hosts to scan (IPv4, IPv6, or hostnames)
+hosts = ["127.0.0.1"]
+
+# Explicit list of ports to monitor
+ports = [22, 80, 443, 3306, 5432, 6379, 8080]
+
+# Optional inclusive port range (scanned in addition to `ports`)
+# port_range = [8000, 9000]
+
+# Per-port connection timeout in seconds
+timeout = 1.0
+
+[daemon]
+# How often to run a scan (seconds)
+interval_seconds = 60
+
+# Where to persist the last known port state
+state_file = "/var/lib/portwatch/state.json"
+
+[notify]
+# HTTP(S) webhook — receives a JSON POST on any change
+# webhook_url = "https://hooks.slack.com/services/XXX/YYY/ZZZ"
+
+[notify.smtp]
+# SMTP settings for email alerts (all optional)
+# host     = "smtp.example.com"
+# port     = 587
+# user     = "portwatch@example.com"
+# password = "s3cr3t"
+# from     = "portwatch@example.com"
+# to       = ["ops@example.com", "security@example.com"]
