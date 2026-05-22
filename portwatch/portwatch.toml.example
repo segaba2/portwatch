@@ -1,35 +1,39 @@
-# portwatch example configuration file
-# Copy to /etc/portwatch/portwatch.toml and adjust as needed.
+# portwatch example configuration
+# Copy to portwatch.toml and adjust as needed.
 
-[scan]
-# Hosts to scan (IPv4, IPv6, or hostnames)
-hosts = ["127.0.0.1"]
+[portwatch]
+# Hosts to scan (IP addresses or hostnames)
+hosts = ["127.0.0.1", "192.168.1.1"]
 
-# Explicit list of ports to monitor
-ports = [22, 80, 443, 3306, 5432, 6379, 8080]
-
-# Optional inclusive port range (scanned in addition to `ports`)
-# port_range = [8000, 9000]
+# Ports to monitor — individual ports and/or ranges
+ports = [22, 80, 443, "8000-8100"]
 
 # Per-port connection timeout in seconds
 timeout = 1.0
 
-[daemon]
 # How often to run a scan (seconds)
-interval_seconds = 60
+interval = 300
 
-# Where to persist the last known port state
-state_file = "/var/lib/portwatch/state.json"
+# Directory used to persist state and history between runs
+state_dir = "/var/lib/portwatch"
 
-[notify]
-# HTTP(S) webhook — receives a JSON POST on any change
-# webhook_url = "https://hooks.slack.com/services/XXX/YYY/ZZZ"
+# Maximum number of historical snapshots to keep per host
+history_max_entries = 100
 
-[notify.smtp]
-# SMTP settings for email alerts (all optional)
-# host     = "smtp.example.com"
-# port     = 587
-# user     = "portwatch@example.com"
-# password = "s3cr3t"
-# from     = "portwatch@example.com"
-# to       = ["ops@example.com", "security@example.com"]
+[portwatch.webhook]
+# Leave url empty to disable webhook notifications
+url = ""
+# Optional bearer token sent in the Authorization header
+token = ""
+
+[portwatch.email]
+# Leave to_addr empty to disable email notifications
+to_addr = ""
+from_addr = "portwatch@example.com"
+smtp_host = "localhost"
+smtp_port = 25
+# Set to true to use STARTTLS
+use_tls = false
+# SMTP credentials (optional)
+username = ""
+password = ""
