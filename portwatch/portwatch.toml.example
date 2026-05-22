@@ -1,39 +1,40 @@
-# portwatch example configuration
+# portwatch configuration example
 # Copy to portwatch.toml and adjust as needed.
 
-[portwatch]
-# Hosts to scan (IP addresses or hostnames)
-hosts = ["127.0.0.1", "192.168.1.1"]
-
-# Ports to monitor — individual ports and/or ranges
-ports = [22, 80, 443, "8000-8100"]
-
-# Per-port connection timeout in seconds
-timeout = 1.0
-
+[general]
 # How often to run a scan (seconds)
 interval = 300
+# Path to store state between runs
+state_file = "/var/lib/portwatch/state.json"
+# Path to store scan history
+history_file = "/var/lib/portwatch/history.json"
 
-# Directory used to persist state and history between runs
-state_dir = "/var/lib/portwatch"
+[scan]
+# Hosts to monitor (IP addresses or hostnames)
+hosts = ["127.0.0.1", "192.168.1.1"]
+# Individual ports
+ports = [22, 80, 443, 8080]
+# Port ranges (inclusive)
+port_ranges = [[3000, 3010]]
+# Per-port connection timeout (seconds)
+timeout = 1.0
 
-# Maximum number of historical snapshots to keep per host
-history_max_entries = 100
+[output]
+# Report format: "text" or "json"
+format = "text"
+# Optional: write reports to this directory instead of stdout
+# report_dir = "/var/log/portwatch/reports"
 
-[portwatch.webhook]
-# Leave url empty to disable webhook notifications
-url = ""
-# Optional bearer token sent in the Authorization header
-token = ""
+[webhook]
+enabled = false
+# url = "https://hooks.example.com/portwatch"
+# secret = "changeme"
 
-[portwatch.email]
-# Leave to_addr empty to disable email notifications
-to_addr = ""
-from_addr = "portwatch@example.com"
-smtp_host = "localhost"
-smtp_port = 25
-# Set to true to use STARTTLS
-use_tls = false
-# SMTP credentials (optional)
-username = ""
-password = ""
+[email]
+enabled = false
+# smtp_host = "smtp.example.com"
+# smtp_port = 587
+# smtp_user = "alerts@example.com"
+# smtp_password = "changeme"
+# from_addr = "alerts@example.com"
+# to_addrs = ["ops@example.com"]
