@@ -1,46 +1,66 @@
-# portwatch example configuration
-# Copy this file to portwatch.toml and adjust as needed.
+# portwatch configuration example
+# Copy to portwatch.toml and adjust as needed.
 
 [general]
-# Hosts to scan (IP addresses or hostnames)
-hosts = ["127.0.0.1", "192.168.1.1"]
-
-# Individual ports and/or ranges
-ports = [22, 80, 443, "8000-8100"]
-
-# Scan timeout per port in seconds
-timeout = 1.0
-
-# How often to run a scan (seconds)
+# How often to scan, in seconds
 interval = 300
 
-# Where to persist state between runs
-state_file = "/var/lib/portwatch/state.json"
+# Where to store state files
+state_dir = "~/.portwatch/state"
 
-# Where to write scan history
-history_file = "/var/lib/portwatch/history.json"
+# Where to store history files
+history_dir = "~/.portwatch/history"
 
-[notifications]
-# Set to false to disable all notifications
-enabled = true
+# Where to store baseline snapshots
+baseline_dir = "~/.portwatch/baselines"
 
-# Webhook URL (leave empty to disable)
-webhook_url = ""
+[scan]
+# Hosts to monitor (IP addresses or hostnames)
+hosts = [
+    "127.0.0.1",
+    # "192.168.1.1",
+]
 
-# Email settings (leave empty to disable)
-[notifications.email]
+# Ports to scan — individual ports and/or ranges
+ports = [22, 80, 443, "8000-8100"]
+
+# Per-port connection timeout in seconds
+timeout = 1.0
+
+# Transport protocols to scan
+protocols = ["tcp"]
+
+[baseline]
+# Name of the active baseline to compare scans against.
+# Leave empty to disable baseline comparison.
+active = "production"
+
+# Raise an alert when the scan deviates from the active baseline
+alert_on_deviation = true
+
+[webhook]
+enabled = false
+url = "https://hooks.example.com/portwatch"
+# Optional Bearer token
+# token = "secret"
+
+[email]
+enabled = false
 smtp_host = "localhost"
 smtp_port = 25
 from_addr = "portwatch@example.com"
 to_addrs = ["ops@example.com"]
-subject_prefix = "[portwatch]"
+# username = ""
+# password = ""
+# use_tls = false
 
-[rate_limit]
-# Maximum number of alerts per host within the time window
+[ratelimit]
+# Maximum alerts per window
 max_alerts = 5
+# Window size in seconds
+window_seconds = 3600
 
-# Sliding window size in seconds
-window_seconds = 300
-
-# How long (seconds) to suppress alerts after the limit is hit
-cooldown_seconds = 60
+[retry]
+max_attempts = 3
+base_delay = 2.0
+max_delay = 30.0
