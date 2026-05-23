@@ -1,55 +1,46 @@
 # portwatch example configuration
-# Copy this file to portwatch.toml and adjust to your environment.
+# Copy this file to portwatch.toml and adjust as needed.
 
-[portwatch]
+[general]
 # Hosts to scan (IP addresses or hostnames)
 hosts = ["127.0.0.1", "192.168.1.1"]
 
-# Ports to monitor. Supports individual ports and ranges.
+# Individual ports and/or ranges
 ports = [22, 80, 443, "8000-8100"]
 
-# Seconds to wait for a connection before marking a port as closed.
+# Scan timeout per port in seconds
 timeout = 1.0
 
-# How often (in seconds) the daemon rescans all hosts.
+# How often to run a scan (seconds)
 interval = 300
 
-# Directory where state snapshots and history are stored.
-state_dir = "~/.local/share/portwatch"
+# Where to persist state between runs
+state_file = "/var/lib/portwatch/state.json"
 
-# Maximum number of history entries to retain per host.
-history_limit = 100
+# Where to write scan history
+history_file = "/var/lib/portwatch/history.json"
 
-# Output format when using the `scan` CLI command: "text" or "json"
-output_format = "text"
+[notifications]
+# Set to false to disable all notifications
+enabled = true
 
-# Optional: write scan reports to this directory.
-# report_dir = "/var/log/portwatch"
+# Webhook URL (leave empty to disable)
+webhook_url = ""
 
-[portwatch.webhook]
-# Set enabled = true and provide a URL to receive POST alerts.
-enabled = false
-url = "https://hooks.example.com/portwatch"
-# Optional Bearer token sent in the Authorization header.
-# token = "secret-token"
-
-[portwatch.email]
-# Set enabled = true to receive email alerts on port changes.
-enabled = false
-smtp_host = "smtp.example.com"
-smtp_port = 587
-use_tls = true
-username = "alerts@example.com"
-# password = "smtp-password"
-from_addr = "alerts@example.com"
+# Email settings (leave empty to disable)
+[notifications.email]
+smtp_host = "localhost"
+smtp_port = 25
+from_addr = "portwatch@example.com"
 to_addrs = ["ops@example.com"]
 subject_prefix = "[portwatch]"
 
-# ---------------------------------------------------------------------------
-# Scheduler tuning
-# ---------------------------------------------------------------------------
-[portwatch.scheduler]
-# When the previous scan takes longer than *interval*, the next scan starts
-# immediately (delay floor is 0). Set jitter > 0 to spread scans when
-# multiple portwatch instances share the same target hosts.
-jitter = 0.0
+[rate_limit]
+# Maximum number of alerts per host within the time window
+max_alerts = 5
+
+# Sliding window size in seconds
+window_seconds = 300
+
+# How long (seconds) to suppress alerts after the limit is hit
+cooldown_seconds = 60
