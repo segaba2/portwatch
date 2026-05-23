@@ -61,3 +61,21 @@ class RateLimiter:
         """Return the monotonic timestamp until which *host* is suppressed, or None."""
         val = self._suppressed.get(self._bucket(host), 0.0)
         return val if val > time.monotonic() else None
+
+    def status(self, host: str, now: Optional[float] = None) -> dict:
+        """Return a summary of the current rate-limit state for *host*.
+
+        Returns a dict with:
+          - ``allowed``: whether an alert would be permitted right now.
+          - ``count``: number of alerts recorded in the current window.
+          - ``suppressed_until``: monotonic timestamp of suppression expiry, or None.
+        """
+        now = now if now is not None else time.monotonic()
+        key = self._bucket(host)
+        self._prune(key, now)
+        suppressed = self._suppressed.get(key, 0.0)
+        return {
+            "allowed": self.is_allowed(host, now=now),
+            "count": len(self._timestamps.get(key, [])),
+            "suppressed_until": suppressed if suppressed > now else None,
+        }
