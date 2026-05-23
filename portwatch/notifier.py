@@ -1,75 +1,90 @@
-"""Notification backends for portwatch alerts."""
+"""Notification delivery: webhook and email, with optional retry support."""
 
-import json
-import logging
+from __future__ import annotations
+
 import smtplib
-from dataclasses import dataclass
-from email.mime.text import MIMEText
-from typing import Optional
-from urllib import request, error
+import logging
+from dataclasses import dataclass, field
+from email.message import EmailMessage
+from typing import Any
+
+import urllib.request
+import json
+
+from portwatch.retry import RetryConfig, with_retry
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
 class NotifierConfig:
-    """Configuration for notification backends."""
-    webhook_url: Optional[str] = None
-    smtp_host: Optional[str] = None
-    smtp_port: int = 587
-    smtp_user: Optional[str] = None
-    smtp_password: Optional[str] = None
-    email_from: Optional[str] = None
-    email_to: Optional[str] = None
-    use_tls: bool = True
+    webhook_url: str = ""
+    email_to: list[str] = field(default_factory=list)
+    email_from: str = "portwatch@localhost"
+    smtp_host: str = "localhost"
+    smtp_port: int = 25
+    smtp_user: str = ""
+    smtp_password: str = ""
+    retry: RetryConfig = field(default_factory=RetryConfig)
 
 
-def send_webhook(url: str, payload: dict, timeout: int = 10) -> bool:
-    """Send a JSON payload to a webhook URL. Returns True on success."""
-    try:
-        data = json.dumps(payload).encode("utf-8")
-        req = request.Request(
-            url,
-            data=data,
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
-        with request.urlopen(req, timeout=timeout) as resp:
-            logger.info("Webhook delivered, status=%s", resp.status)
-            return resp.status < 300
-    except error.URLError as exc:
-        logger.error("Webhook delivery failed: %s", exc)
-        return False
+def send_webhook(url: str, payload: dict[str, Any], retry: RetryConfig | None = None) -> None:
+    """POST *payload* as JSON to *url*."""
+    data = json.dumps(payload).encode()
+    req = urllib.request.Request(
+        url,
+        data=data,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+
+    def _do() -> None:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            logger.debug("Webhook delivered, status=%s", resp.status)
+
+    with_retry(_do, config=retry or RetryConfig())
 
 
-def send_email(config: NotifierConfig, subject: str, body: str) -> bool:
-    """Send an alert email via SMTP. Returns True on success."""
-    if not all([config.smtp_host, config.email_from, config.email_to]):
-        logger.error("Incomplete SMTP configuration; email not sent.")
-        return False
-    msg = MIMEText(body)
+def send_email(
+    subject: str,
+    body: str,
+    config: NotifierConfig,
+) -> None:
+    """Send a plain-text alert email via SMTP."""
+    if not config.email_to:
+        return
+
+    msg = EmailMessage()
     msg["Subject"] = subject
     msg["From"] = config.email_from
-    msg["To"] = config.email_to
-    try:
-        smtp_cls = smtplib.SMTP
-        with smtp_cls(config.smtp_host, config.smtp_port) as server:
-            if config.use_tls:
-                server.starttls()
-            if config.smtp_user and config.smtp_password:
-                server.login(config.smtp_user, config.smtp_password)
-            server.sendmail(config.email_from, [config.email_to], msg.as_string())
-        logger.info("Email alert sent to %s", config.email_to)
-        return True
-    except smtplib.SMTPException as exc:
-        logger.error("Email delivery failed: %s", exc)
-        return False
+    msg["To"] = ", ".join(config.email_to)
+    msg.set_content(body)
+
+    def _do() -> None:
+        with smtplib.SMTP(config.smtp_host, config.smtp_port) as smtp:
+            if config.smtp_user:
+                smtp.login(config.smtp_user, config.smtp_password)
+            smtp.send_message(msg)
+            logger.debug("Email sent to %s", config.email_to)
+
+    with_retry(_do, config=config.retry)
 
 
-def notify(config: NotifierConfig, subject: str, body: str, payload: Optional[dict] = None) -> None:
-    """Dispatch notifications to all configured backends."""
+def notify(
+    subject: str,
+    body: str,
+    payload: dict[str, Any],
+    config: NotifierConfig,
+) -> None:
+    """Dispatch all configured notification channels."""
     if config.webhook_url:
-        webhook_payload = payload or {"subject": subject, "body": body}
-        send_webhook(config.webhook_url, webhook_payload)
-    if config.smtp_host:
-        send_email(config, subject, body)
+        try:
+            send_webhook(config.webhook_url, payload, retry=config.retry)
+        except Exception as exc:
+            logger.error("Webhook failed: %s", exc)
+
+    if config.email_to:
+        try:
+            send_email(subject, body, config)
+        except Exception as exc:
+            logger.error("Email failed: %s", exc)
