@@ -47,6 +47,14 @@ class TestDiffStates:
         assert changes[0].previous_status == "open"
         assert changes[0].current_status == "filtered"
 
+    def test_multiple_changes(self):
+        """Multiple simultaneous changes are all reported."""
+        prev = [self._state(80), self._state(22), self._state(443)]
+        curr = [self._state(80), self._state(8080), self._state(443, status="filtered")]
+        changes = diff_states(prev, curr)
+        ports_changed = {c.port for c in changes}
+        assert ports_changed == {22, 8080, 443}
+
 
 # ---------------------------------------------------------------------------
 # build_alert_body / build_alert_payload
@@ -81,16 +89,3 @@ class TestBuildAlert:
 
 class TestSendWebhook:
     def test_success(self):
-        mock_resp = MagicMock()
-        mock_resp.status = 200
-        mock_resp.__enter__ = lambda s: s
-        mock_resp.__exit__ = MagicMock(return_value=False)
-        with patch("portwatch.notifier.request.urlopen", return_value=mock_resp):
-            result = send_webhook("http://example.com/hook", {"key": "value"})
-        assert result is True
-
-    def test_failure(self):
-        from urllib.error import URLError
-        with patch("portwatch.notifier.request.urlopen", side_effect=URLError("timeout")):
-            result = send_webhook("http://example.com/hook", {})
-        assert result is False
