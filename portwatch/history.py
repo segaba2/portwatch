@@ -69,7 +69,12 @@ def load_history(base_dir: Path, host: str) -> List[HistoryEntry]:
     if not path.exists():
         return []
     with path.open() as fh:
-        raw = json.load(fh)
+        try:
+            raw = json.load(fh)
+        except json.JSONDecodeError as exc:
+            raise ValueError(
+                f"History file for '{host}' is corrupt or not valid JSON: {path}"
+            ) from exc
     return [HistoryEntry.from_dict(d) for d in raw]
 
 
